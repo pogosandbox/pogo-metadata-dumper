@@ -1,0 +1,22 @@
+{
+  "name": "pogo-metadata-dumper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bin/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "binary-parser": "^1.1.5",
+    "fs-promise": "^2.0.0",
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.54",
+    "@types/node": "^7.0.5",
+    "tslint": "^4.5.1",
+    "typescript": "^2.2.1"
+  }
+}
