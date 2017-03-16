@@ -35,26 +35,6 @@ function GetString(data: Buffer, index: number): string {
     return (new Parser()).string('str', {zeroTerminated: true}).parse(raw).str;
 }
 
-// async function ExtractStrings(data: Buffer, file: string) {
-//     console.log('Strings Count: ' + metadatas.header.stringCount);
-//     let stringsParser = new Parser()
-//         .array('strings', {
-//             type: (new Parser()).string('', {zeroTerminated: true}),
-//             length: metadatas.header.stringCount,
-//         });
-
-//     metadatas.strings = stringsParser.parse(data.slice(metadatas.header.stringOffset)).strings;
-
-//     let stream = fs.createWriteStream(file, 'utf8');
-//     _.each(metadatas.strings, text => {
-//         stream.write(text + '\r\n');
-//     });
-//     stream.end();
-
-//     console.log(metadatas.strings.length + ' strings extracted.');
-// }
-
-
 async function ExtractTypes(data: Buffer, file: string) {
     let typesCount = metadatas.header.typeDefinitionsCount / (26 * 4 + 8 * 2);
     console.log('Types Count: ' + typesCount);
@@ -98,12 +78,7 @@ async function ExtractMethods(data: Buffer) {
     let methods: any[] = methodsParser.parse(data.slice(metadatas.header.methodsOffset));
     metadatas.methods = _.map(methods, method => GetString(data, method.nameIndex));
 
-    console.log(methods.slice(0, 5));
-
-    // let stream = fs.createWriteStream(file, 'utf8');
-    // _.each(metadatas.methods, method => {
-    //     stream.write(method + '\r\n');
-    // });
+    // console.log(methods.slice(0, 5));
 
     console.log(metadatas.methods.length + ' methods extracted.');
 }
@@ -116,7 +91,7 @@ async function Main() {
     if (metadatas.header.sanity.toString(16) !== 'fab11baf') throw new Error('Incorrect sanity.');
     console.log('Metadata version: ' + metadatas.header.version);
 
-    // await ExtractStringLitterals(data, header, 'data/string.litterals.txt');
+    await ExtractStringLitterals(data, 'data/string.litterals.txt');
 
     await ExtractMethods(data);
 
