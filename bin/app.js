@@ -10,6 +10,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-promise");
 const _ = require("lodash");
+const logger = require("winston");
+logger.remove(logger.transports.Console);
+logger.add(logger.transports.Console, {
+    'colorize': true,
+    'level': 'debug',
+});
 let Parser = require('binary-parser').Parser;
 const parser_1 = require("./parser");
 let metadatas = {
@@ -20,19 +26,16 @@ let metadatas = {
 };
 function ExtractStringLitterals(data, file) {
     return __awaiter(this, void 0, void 0, function* () {
-        let litteralsParser = new Parser()
-            .array('litterals', {
-            type: parser_1.parsers.il2CppStringLiteral,
-            length: metadatas.header.stringLiteralCount / 8 // sizeof each element
-        });
-        let litterals = litteralsParser.parse(data.slice(metadatas.header.stringLiteralOffset)).litterals;
+        logger.info('Begin extract string litterals...');
+        let litterals = parser_1.parsers.getLitteralsParser(metadatas.header.stringLiteralCount)
+            .parse(data.slice(metadatas.header.stringLiteralOffset)).litterals;
         let stream = fs.createWriteStream(file, 'utf8');
         _.each(litterals, litteral => {
             let start = metadatas.header.stringLiteralDataOffset + litteral.dataIndex;
             stream.write(data.slice(start, start + litteral.length).toString('utf8') + '\r\n');
         });
         stream.end();
-        console.log(litterals.length + ' string litterals extracted.');
+        logger.info(litterals.length + ' string litterals extracted.');
     });
 }
 function GetString(data, index) {
@@ -41,18 +44,23 @@ function GetString(data, index) {
 }
 function ExtractTypes(data, file) {
     return __awaiter(this, void 0, void 0, function* () {
+        logger.info('Begin extract types...');
         let typesCount = metadatas.header.typeDefinitionsCount / (26 * 4 + 8 * 2);
-        console.log('Types Count: ' + typesCount);
-        let typesParser = new Parser()
-            .array('', {
-            type: parser_1.parsers.il2CppTypeDefinition,
-            length: typesCount,
-        });
-        let rawTypes = typesParser.parse(data.slice(metadatas.header.typeDefinitionsOffset));
-        console.log(rawTypes.slice(0, 5));
+        logger.info('Types Count: ' + typesCount);
+        let rawTypes = parser_1.parsers.getTypesParser(typesCount)
+            .parse(data.slice(metadatas.header.typeDefinitionsOffset));
+        logger.debug(rawTypes.slice(0, 5));
         metadatas.types = _.map(rawTypes, type => {
+            if (type.interfaces_count > 0 || type.interface_offsets_count > 0) {
+                logger.debug('type', type);
+                logger.debug('interface_count', type.interfaces_count);
+                logger.debug('interfacesStart', type.interfacesStart);
+                logger.debug('interface_offsets_count', type.interface_offsets_count);
+                logger.debug('interfaceOffsetsStart', type.interfaceOffsetsStart);
+            }
             return {
                 name: GetString(data, type.nameIndex),
+                interfaces: [],
                 methods: metadatas.methods.slice(type.methodStart, type.methodStart + type.method_count),
             };
         });
@@ -64,36 +72,32 @@ function ExtractTypes(data, file) {
             });
             stream.write('\r\n');
         });
-        console.log(metadatas.types.length + ' types extracted.');
+        logger.info(metadatas.types.length + ' types extracted.');
     });
 }
 function ExtractMethods(data) {
     return __awaiter(this, void 0, void 0, function* () {
-        let methodsParser = new Parser()
-            .array('', {
-            type: parser_1.parsers.il2CppMethodDefinition,
-            length: metadatas.header.methodsCount / (12 * 4 + 4 * 2),
-        });
-        let methods = methodsParser.parse(data.slice(metadatas.header.methodsOffset));
+        logger.info('Begin extract methods...');
+        let methods = parser_1.parsers.getMethodsParser(metadatas.header.methodsCount)
+            .parse(data.slice(metadatas.header.methodsOffset));
         metadatas.methods = _.map(methods, method => GetString(data, method.nameIndex));
-        // console.log(methods.slice(0, 5));
-        console.log(metadatas.methods.length + ' methods extracted.');
+        // logger.info(methods.slice(0, 5));
+        logger.info(metadatas.methods.length + ' methods extracted.');
     });
 }
 function Main() {
     return __awaiter(this, void 0, void 0, function* () {
         let data = yield fs.readFile('data/global-metadata.dat');
-        console.log('Data length: ' + data.length);
         metadatas.header = parser_1.parsers.il2CppGlobalMetadataHeader.parse(data);
         if (metadatas.header.sanity.toString(16) !== 'fab11baf')
             throw new Error('Incorrect sanity.');
-        console.log('Metadata version: ' + metadatas.header.version);
+        logger.info('Metadata version: ' + metadatas.header.version);
         yield ExtractStringLitterals(data, 'data/string.litterals.txt');
         yield ExtractMethods(data);
         yield ExtractTypes(data, 'data/types.txt');
     });
 }
 Main()
-    .then(() => console.log('Done.'))
-    .catch(e => console.error(e));
+    .then(() => logger.info('Done.'))
+    .catch(e => logger.error(e));
 //# sourceMappingURL=app.js.map

@@ -159,6 +159,11 @@ let il2CppMethodDefinition = new Parser()
     .uint16('slot')
     .uint16('parameterCount');
 
+let il2CppInterfaceOffsetPair = new Parser()
+    .endianess('little')
+    .int32('interfaceTypeIndex')
+    .int32('offset');
+
 export let parsers = {
     il2CppGlobalMetadataHeader,
     il2CppImageDefinition,
@@ -166,4 +171,26 @@ export let parsers = {
     il2CppTypeDefinition,
     il2CppStringLiteral,
     il2CppMethodDefinition,
+    il2CppInterfaceOffsetPair,
+    getLitteralsParser: function(count) {
+        return new Parser()
+            .array('litterals', {
+                type: parsers.il2CppStringLiteral,
+                length: count / 8 // sizeof each element
+            });
+    },
+    getTypesParser: function(count) {
+        return new Parser()
+            .array('', {
+                type: parsers.il2CppTypeDefinition,
+                length: count,
+            });
+    },
+    getMethodsParser: function(count) {
+        return new Parser()
+            .array('', {
+                type: parsers.il2CppMethodDefinition,
+                length: count / (12 * 4 + 4 * 2), // divide by size of one element
+            });
+    }
 };
