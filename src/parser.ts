@@ -132,7 +132,7 @@ let il2CppTypeDefinition = new Parser()
     // 05 - is_blittable;
     // 06 - is_import;
     // 07-10 - One of nine possible PackingSize values (0, 1, 2, 4, 8, 16, 32, 64, or 128)
-    .bit32('bitfield')
+    .uint32('bitfield') // .bit32('bitfield')
     .uint32('token');
 
 let il2CppStringLiteral = new Parser()
@@ -164,6 +164,40 @@ let il2CppInterfaceOffsetPair = new Parser()
     .int32('interfaceTypeIndex')
     .int32('offset');
 
+let il2CppMetadataUsageList = new Parser()
+    .endianess('little')
+    .uint32('start')
+    .uint32('count');
+
+let il2CppMetadataUsagePair = new Parser()
+    .endianess('little')
+    .uint32('destinationIndex')
+    .uint32('encodedSourceIndex');
+
+let il2CppAssemblyName = new Parser()
+    .endianess('little')
+    .int32('nameIndex')
+    .int32('cultureIndex')
+    .int32('hashValueIndex')
+    .int32('publicKeyIndex')
+    .uint32('hash_alg')
+    .int32('hash_len')
+    .uint32('flags')
+    .int32('major')
+    .int32('minor')
+    .int32('build')
+    .int32('revision')
+    .uint8('publicKeyToken');
+
+let il2CppPropertyDefinition = new Parser()
+    .endianess('little')
+    .int32('nameIndex')
+    .int32('get')
+    .int32('set')
+    .uint32('attrs')
+    .int32('customAttributeIndex')
+    .uint32('token');
+
 export let parsers = {
     il2CppGlobalMetadataHeader,
     il2CppImageDefinition,
@@ -172,9 +206,14 @@ export let parsers = {
     il2CppStringLiteral,
     il2CppMethodDefinition,
     il2CppInterfaceOffsetPair,
+    il2CppMetadataUsageList,
+    il2CppMetadataUsagePair,
+    il2CppAssemblyName,
+    il2CppPropertyDefinition,
+    string: (new Parser()).string('', {zeroTerminated: true}),
     getLitteralsParser: function(count) {
         return new Parser()
-            .array('litterals', {
+            .array('', {
                 type: parsers.il2CppStringLiteral,
                 length: count / 8 // sizeof each element
             });
