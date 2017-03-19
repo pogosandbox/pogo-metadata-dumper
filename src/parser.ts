@@ -198,6 +198,13 @@ let il2CppPropertyDefinition = new Parser()
     .int32('customAttributeIndex')
     .uint32('token');
 
+let il2CppFieldDefinition = new Parser()
+    .endianess('little')
+    .int32('nameIndex')
+    .int32('typeIndex')
+    .int32('customAttributeIndex')
+    .uint32('token');
+
 export let parsers = {
     il2CppGlobalMetadataHeader,
     il2CppImageDefinition,
@@ -210,12 +217,20 @@ export let parsers = {
     il2CppMetadataUsagePair,
     il2CppAssemblyName,
     il2CppPropertyDefinition,
+    il2CppFieldDefinition,
     string: (new Parser()).string('', {zeroTerminated: true}),
     getLitteralsParser: function(count) {
         return new Parser()
             .array('', {
                 type: parsers.il2CppStringLiteral,
-                length: count / 8 // sizeof each element
+                length: count,
+            });
+    },
+    getImagesParser: function(count) {
+        return new Parser()
+            .array('', {
+                type: parsers.il2CppImageDefinition,
+                length: count,
             });
     },
     getTypesParser: function(count) {
@@ -229,7 +244,14 @@ export let parsers = {
         return new Parser()
             .array('', {
                 type: parsers.il2CppMethodDefinition,
-                length: count / (12 * 4 + 4 * 2), // divide by size of one element
+                length: count,
+            });
+    },
+    getFieldsParser: function(count) {
+        return new Parser()
+            .array('', {
+                type: parsers.il2CppFieldDefinition,
+                length: count,
             });
     }
 };

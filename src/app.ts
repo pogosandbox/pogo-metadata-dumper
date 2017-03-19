@@ -5,7 +5,8 @@ import * as _ from 'lodash';
 let Parser = require('binary-parser').Parser;
 
 import {parsers} from './parser';
-import ProtosGeneration from './protos';
+import ProtosGeneration from './generators/protos';
+import PseudoCodeGeneration from './generators/pseudo';
 
 // logger.remove(logger.transports.Console);
 // logger.add(logger.transports.Console, {
@@ -22,15 +23,18 @@ let logger = {
 let metadatas = {
     header: null,
     strings: [],
+    images: [],
     interfaces: [],
     types: [],
     methods: [],
-}
+    fields: [],
+};
 
 function ExtractStringLitterals(data: Buffer, file: string) {
     logger.info('Begin extract string litterals...');
 
-    let litterals = parsers.getLitteralsParser(metadatas.header.stringLiteralCount)
+    let count = metadatas.header.stringLiteralCount / parsers.il2CppStringLiteral.sizeOf();
+    let litterals = parsers.getLitteralsParser(count)
                         .parse(data.slice(metadatas.header.stringLiteralOffset));
 
     let stream = fs.createWriteStream(file, 'utf8');
@@ -51,7 +55,7 @@ function GetString(data: Buffer, index: number): string {
 function ExtractInterfaces(data: Buffer) {
     logger.info('Begin extract interfaces...');
 
-    let interfacesCount = metadatas.header.interfacesCount / (26 * 4 + 8 * 2);
+    let interfacesCount = metadatas.header.interfacesCount / parsers.il2CppTypeDefinition.sizeOf();
     metadatas.interfaces = parsers.getTypesParser(interfacesCount)
                             .parse(data.slice(metadatas.header.interfacesOffset));
 
@@ -65,85 +69,74 @@ function ExtractInterfaces(data: Buffer) {
     logger.info('  ' + metadatas.interfaces.length + ' interfaces extracted.');
 }
 
-function ExtractTypes(data: Buffer, file: string) {
+function ExtractFields(data: Buffer) {
+    logger.info('Begin extract fields...');
+
+    let count = metadatas.header.fieldsCount / parsers.il2CppFieldDefinition.sizeOf();
+    let fields = metadatas.fields = parsers.getFieldsParser(count)
+                            .parse(data.slice(metadatas.header.fieldsOffset));
+
+    logger.info('  extract info...');
+    _.each(fields, field => {
+        field.name = GetString(data, field.nameIndex);
+    });
+
+    logger.info('  ' + fields.length + ' fields extracted.');
+}
+
+function ExtractTypes(data: Buffer) {
     logger.info('Begin extract types...');
 
-    let typesCount = metadatas.header.typeDefinitionsCount / (26 * 4 + 8 * 2);
+    let typesCount = metadatas.header.typeDefinitionsCount / parsers.il2CppTypeDefinition.sizeOf();
     metadatas.types = parsers.getTypesParser(typesCount)
                             .parse(data.slice(metadatas.header.typeDefinitionsOffset));
 
-    logger.info('  extract name and methods...');
+    logger.info('  extract informations...');
     _.each(metadatas.types, type => {
         type.name = GetString(data, type.nameIndex);
         type.nameSpace = GetString(data, type.namespaceIndex);
-        type.interfaces = [];
+        // type.interfaces = [];
+        type.attributes = {
+            public: (type.flags & 0x00000007) === 0x00000001,
+            interface: (type.flags & 0x00000020) !== 0,
+            abstract: (type.flags & 0x00000080) !== 0,
+            sealed: (type.flags & 0x00000100) !== 0,
+        };
+        type.fields = metadatas.fields.slice(type.fieldStart, type.fieldStart + type.field_count);
         type.methods = metadatas.methods.slice(type.methodStart, type.methodStart + type.method_count);
-    });
-
-    // logger.info('  extract nested types...');
-    // _.each(metadatas.types, type => {
-    //     if (type.nested_type_count > 0) {
-    //         type.nestedTypes = metadatas.types.slice(type.nestedTypesStart, type.nestedTypesStart + type.nested_type_count)
-    //     } else {
-    //         type.nestedTypes = [];
-    //     }
-    // });
-
-    logger.info('  extract more infos...');
-    _.each(metadatas.types, type => {
-        if (type.parentIndex >= 0) {
-            type.parent = metadatas.types[type.parentIndex];
-        }
-        if (type.interfaces_count > 0) {
-            // let rawInterfaces: any[] = parsers.getTypesParser(type.interfaces_count)
-            //     .parse(data.slice(metadatas.header.interfacesOffset + type.interfacesStart * (26 * 4 + 8 * 2)));
-            // type.interfaces = _.map(rawInterfaces, i => {
-            //     let interf = _.find(metadatas.types, t => t.nameIndex === i.nameIndex);
-            //     if (!interf) {
-            //         interf = i;
-            //         interf.name = GetString(data, interf.nameIndex);
-            //     }
-            //     return interf;
-            // });
-            type.interfaces = []; // metadatas.interfaces.slice(type.interfacesStart, type.interfacesStart + type.interfaces_count);
-        } else {
-            type.interfaces = [];
-        }
-    });
-
-    logger.info('  saving to text...');
-    let stream = fs.createWriteStream(file, 'utf8');
-    _.each(metadatas.types, type => {
-        stream.write(type.nameSpace + '.' + type.name);
-        if (type.parent) {
-            stream.write(' extends ' + type.parent.name);
-        }
-        // if (type.nestedTypes.length > 0) {
-        //     stream.write(' extends ');
-        //     _.each(type.nestedTypes, nested => {
-        //         stream.write(nested.name + ' ');
-        //     });
-        // }
-        if (type.interfaces.length > 0) {
-            stream.write(' implements ');
-            _.each(type.interfaces, i => {
-                stream.write(i.name + ' ');
-            });
-        }
-        stream.write('\r\n');
-        _.each(type.methods, method => {
-            stream.write('    ' + method.name + '\r\n');
-        });
-        stream.write('\r\n');
     });
 
     logger.info('  ' + metadatas.types.length + ' types extracted.');
 }
 
+
+function ExtractImages(data: Buffer, file: string) {
+    logger.info('Begin extract images...');
+
+    let imagesCount = metadatas.header.imagesCount / parsers.il2CppImageDefinition.sizeOf();
+    let images = metadatas.images = parsers.getImagesParser(imagesCount)
+                            .parse(data.slice(metadatas.header.imagesOffset));
+
+    logger.info('  extract name...');
+    _.each(images, image => {
+        image.name = GetString(data, image.nameIndex);
+        image.types = metadatas.types.slice(image.typeStart, image.typeStart + image.typeCount);
+    });
+
+    let stream = fs.createWriteStream(file, 'utf8');
+    _.each(images, image => {
+        stream.write(`${image.name} (${image.typeCount})\r\n`);
+    });
+    stream.end();
+
+    logger.info('  ' + images.length + ' images extracted.');
+}
+
 function ExtractMethods(data: Buffer) {
     logger.info('Begin extract methods...');
 
-    metadatas.methods = parsers.getMethodsParser(metadatas.header.methodsCount)
+    let methodsCount = metadatas.header.methodsCount / parsers.il2CppMethodDefinition.sizeOf();
+    metadatas.methods = parsers.getMethodsParser(methodsCount)
                             .parse(data.slice(metadatas.header.methodsOffset));
 
     _.each(metadatas.methods, method => {
@@ -161,9 +154,15 @@ async function Main() {
         logger.info('Metadata version: ' + metadatas.header.version);
 
         ExtractStringLitterals(data, 'data/string.litterals.txt');
+        ExtractFields(data);
         ExtractMethods(data);
         ExtractInterfaces(data);
-        ExtractTypes(data, 'data/types.txt');
+        ExtractTypes(data);
+        ExtractImages(data, 'data/images.txt');
+
+        logger.info('Exporting pseudo code...');
+        let pseudo = new PseudoCodeGeneration(metadatas);
+        pseudo.export('data/pseudo.cs');
 
         logger.info('Exporting protos...');
         let protos = new ProtosGeneration(metadatas);
