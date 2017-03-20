@@ -23,7 +23,7 @@ export default class ProtosGeneration {
         let rpcTypes = _.filter(<any[]>this.metadatas.types, t => t.nameSpace.startsWith('Holoholo.Rpc'));
         _.each(rpcTypes, rpc => {
             stream.write(`message ${rpc.name}\r\n{\r\n`);
-            _.each(_.filter(<any[]>rpc.methods, m => _.startsWith(m.name, 'get_')), m => {
+            _.each(_.filter(<any[]>rpc.methods, m => _.startsWith(m.name, 'set_')), m => {
                 let message = _.snakeCase(m.name.substring(4));
                 if (message !== 'parser' && message !== 'descriptor') {
                     let fieldType = ''; // this.getReturnType(m);

@@ -4,7 +4,8 @@ import * as _ from 'lodash';
 
 let Parser = require('binary-parser').Parser;
 
-import {parsers} from './parser';
+import {parsers} from './parsers/metadata';
+import ElfParser from './parsers/elf';
 import ProtosGeneration from './generators/protos';
 import PseudoCodeGeneration from './generators/pseudo';
 
@@ -18,7 +19,7 @@ let logger = {
     debug: console.log,
     info: console.log,
     error: console.error,
-}
+};
 
 let metadatas = {
     header: null,
@@ -147,8 +148,8 @@ function ExtractMethods(data: Buffer) {
 }
 
 async function Main() {
-    let data = await fs.readFile('data/global-metadata.dat');
     try {
+        let data = await fs.readFile('data/global-metadata.dat');
         metadatas.header = parsers.il2CppGlobalMetadataHeader.parse(data);
         if (metadatas.header.sanity.toString(16) !== 'fab11baf') throw new Error('Incorrect sanity.');
         logger.info('Metadata version: ' + metadatas.header.version);
@@ -159,6 +160,9 @@ async function Main() {
         ExtractInterfaces(data);
         ExtractTypes(data);
         ExtractImages(data, 'data/images.txt');
+
+        let elf = new ElfParser();
+        elf.load('data/libil2cpp.so');
 
         logger.info('Exporting pseudo code...');
         let pseudo = new PseudoCodeGeneration(metadatas);

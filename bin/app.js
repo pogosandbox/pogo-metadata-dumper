@@ -12,7 +12,8 @@ const fs = require("fs-promise");
 const _ = require("lodash");
 // import * as logger from 'winston';
 let Parser = require('binary-parser').Parser;
-const parser_1 = require("./parser");
+const metadata_1 = require("./parsers/metadata");
+const elf_1 = require("./parsers/elf");
 const protos_1 = require("./generators/protos");
 const pseudo_1 = require("./generators/pseudo");
 // logger.remove(logger.transports.Console);
@@ -36,8 +37,8 @@ let metadatas = {
 };
 function ExtractStringLitterals(data, file) {
     logger.info('Begin extract string litterals...');
-    let count = metadatas.header.stringLiteralCount / parser_1.parsers.il2CppStringLiteral.sizeOf();
-    let litterals = parser_1.parsers.getLitteralsParser(count)
+    let count = metadatas.header.stringLiteralCount / metadata_1.parsers.il2CppStringLiteral.sizeOf();
+    let litterals = metadata_1.parsers.getLitteralsParser(count)
         .parse(data.slice(metadatas.header.stringLiteralOffset));
     let stream = fs.createWriteStream(file, 'utf8');
     _.each(litterals, litteral => {
@@ -49,12 +50,12 @@ function ExtractStringLitterals(data, file) {
 }
 function GetString(data, index) {
     let raw = data.slice(metadatas.header.stringOffset + index);
-    return parser_1.parsers.string.parse(raw);
+    return metadata_1.parsers.string.parse(raw);
 }
 function ExtractInterfaces(data) {
     logger.info('Begin extract interfaces...');
-    let interfacesCount = metadatas.header.interfacesCount / parser_1.parsers.il2CppTypeDefinition.sizeOf();
-    metadatas.interfaces = parser_1.parsers.getTypesParser(interfacesCount)
+    let interfacesCount = metadatas.header.interfacesCount / metadata_1.parsers.il2CppTypeDefinition.sizeOf();
+    metadatas.interfaces = metadata_1.parsers.getTypesParser(interfacesCount)
         .parse(data.slice(metadatas.header.interfacesOffset));
     logger.info('  extract name and methods...');
     _.each(metadatas.interfaces, type => {
@@ -66,8 +67,8 @@ function ExtractInterfaces(data) {
 }
 function ExtractFields(data) {
     logger.info('Begin extract fields...');
-    let count = metadatas.header.fieldsCount / parser_1.parsers.il2CppFieldDefinition.sizeOf();
-    let fields = metadatas.fields = parser_1.parsers.getFieldsParser(count)
+    let count = metadatas.header.fieldsCount / metadata_1.parsers.il2CppFieldDefinition.sizeOf();
+    let fields = metadatas.fields = metadata_1.parsers.getFieldsParser(count)
         .parse(data.slice(metadatas.header.fieldsOffset));
     logger.info('  extract info...');
     _.each(fields, field => {
@@ -77,8 +78,8 @@ function ExtractFields(data) {
 }
 function ExtractTypes(data) {
     logger.info('Begin extract types...');
-    let typesCount = metadatas.header.typeDefinitionsCount / parser_1.parsers.il2CppTypeDefinition.sizeOf();
-    metadatas.types = parser_1.parsers.getTypesParser(typesCount)
+    let typesCount = metadatas.header.typeDefinitionsCount / metadata_1.parsers.il2CppTypeDefinition.sizeOf();
+    metadatas.types = metadata_1.parsers.getTypesParser(typesCount)
         .parse(data.slice(metadatas.header.typeDefinitionsOffset));
     logger.info('  extract informations...');
     _.each(metadatas.types, type => {
@@ -98,8 +99,8 @@ function ExtractTypes(data) {
 }
 function ExtractImages(data, file) {
     logger.info('Begin extract images...');
-    let imagesCount = metadatas.header.imagesCount / parser_1.parsers.il2CppImageDefinition.sizeOf();
-    let images = metadatas.images = parser_1.parsers.getImagesParser(imagesCount)
+    let imagesCount = metadatas.header.imagesCount / metadata_1.parsers.il2CppImageDefinition.sizeOf();
+    let images = metadatas.images = metadata_1.parsers.getImagesParser(imagesCount)
         .parse(data.slice(metadatas.header.imagesOffset));
     logger.info('  extract name...');
     _.each(images, image => {
@@ -115,8 +116,8 @@ function ExtractImages(data, file) {
 }
 function ExtractMethods(data) {
     logger.info('Begin extract methods...');
-    let methodsCount = metadatas.header.methodsCount / parser_1.parsers.il2CppMethodDefinition.sizeOf();
-    metadatas.methods = parser_1.parsers.getMethodsParser(methodsCount)
+    let methodsCount = metadatas.header.methodsCount / metadata_1.parsers.il2CppMethodDefinition.sizeOf();
+    metadatas.methods = metadata_1.parsers.getMethodsParser(methodsCount)
         .parse(data.slice(metadatas.header.methodsOffset));
     _.each(metadatas.methods, method => {
         method.name = GetString(data, method.nameIndex);
@@ -125,9 +126,9 @@ function ExtractMethods(data) {
 }
 function Main() {
     return __awaiter(this, void 0, void 0, function* () {
-        let data = yield fs.readFile('data/global-metadata.dat');
         try {
-            metadatas.header = parser_1.parsers.il2CppGlobalMetadataHeader.parse(data);
+            let data = yield fs.readFile('data/global-metadata.dat');
+            metadatas.header = metadata_1.parsers.il2CppGlobalMetadataHeader.parse(data);
             if (metadatas.header.sanity.toString(16) !== 'fab11baf')
                 throw new Error('Incorrect sanity.');
             logger.info('Metadata version: ' + metadatas.header.version);
@@ -137,6 +138,8 @@ function Main() {
             ExtractInterfaces(data);
             ExtractTypes(data);
             ExtractImages(data, 'data/images.txt');
+            let elf = new elf_1.default();
+            elf.load('data/libil2cpp.so');
             logger.info('Exporting pseudo code...');
             let pseudo = new pseudo_1.default(metadatas);
             pseudo.export('data/pseudo.cs');
