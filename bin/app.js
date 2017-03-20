@@ -33,6 +33,7 @@ let metadatas = {
     interfaces: [],
     types: [],
     methods: [],
+    parameters: [],
     fields: [],
 };
 function ExtractStringLitterals(data, file) {
@@ -75,6 +76,17 @@ function ExtractFields(data) {
         field.name = GetString(data, field.nameIndex);
     });
     logger.info('  ' + fields.length + ' fields extracted.');
+}
+function ExtractParameters(data) {
+    logger.info('Begin extract parameters...');
+    let count = metadatas.header.parametersCount / metadata_1.parsers.il2CppParameterDefinition.sizeOf();
+    let parameters = metadatas.parameters = metadata_1.parsers.getFieldsParser(count)
+        .parse(data.slice(metadatas.header.parametersOffset));
+    logger.info('  extract info...');
+    _.each(parameters, p => {
+        p.name = GetString(data, p.nameIndex);
+    });
+    logger.info('  ' + parameters.length + ' parameters extracted.');
 }
 function ExtractTypes(data) {
     logger.info('Begin extract types...');
@@ -121,6 +133,7 @@ function ExtractMethods(data) {
         .parse(data.slice(metadatas.header.methodsOffset));
     _.each(metadatas.methods, method => {
         method.name = GetString(data, method.nameIndex);
+        method.parameters = metadatas.parameters.slice(method.parameterStart, method.parameterStart + method.parameterCount);
     });
     logger.info('  ' + metadatas.methods.length + ' methods extracted.');
 }
@@ -134,6 +147,7 @@ function Main() {
             logger.info('Metadata version: ' + metadatas.header.version);
             ExtractStringLitterals(data, 'data/string.litterals.txt');
             ExtractFields(data);
+            ExtractParameters(data);
             ExtractMethods(data);
             ExtractInterfaces(data);
             ExtractTypes(data);

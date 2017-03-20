@@ -46,7 +46,13 @@ export default class PseudoCodeGeneration {
     exportMethods(stream: fs.WriteStream, methods: any[], pad: string) {
         stream.write(pad + '// methods\r\n');
         _.each(methods, method => {
-            stream.write(pad + `${method.name}()\r\n`);
+            stream.write(pad + `${method.name}(`);
+            let params = '';
+            _.each(method.parameters, p => {
+                params += `, ${p.name}`;
+            });
+            stream.write(params.substring(2));
+            stream.write(`)\r\n`);
         });
     }
 

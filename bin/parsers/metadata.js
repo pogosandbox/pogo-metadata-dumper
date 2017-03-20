@@ -186,6 +186,17 @@ let il2CppFieldDefinition = new Parser()
     .int32('typeIndex')
     .int32('customAttributeIndex')
     .uint32('token');
+let il2CppFieldDefaultValue = new Parser()
+    .endianess('little')
+    .int32('fieldIndex')
+    .int32('typeIndex')
+    .int32('dataIndex');
+let il2CppParameterDefinition = new Parser()
+    .endianess('little')
+    .int32('nameIndex')
+    .uint32('token')
+    .int32('customAttributeIndex')
+    .int32('typeIndex');
 exports.parsers = {
     il2CppGlobalMetadataHeader,
     il2CppImageDefinition,
@@ -199,6 +210,8 @@ exports.parsers = {
     il2CppAssemblyName,
     il2CppPropertyDefinition,
     il2CppFieldDefinition,
+    il2CppFieldDefaultValue,
+    il2CppParameterDefinition,
     string: (new Parser()).string('', { zeroTerminated: true }),
     getLitteralsParser: function (count) {
         return new Parser()
