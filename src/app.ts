@@ -179,9 +179,6 @@ async function Main() {
         ExtractTypes(data);
         ExtractImages(data, 'data/images.txt');
 
-        let elf = new ElfParser();
-        elf.load('data/libil2cpp.so');
-
         logger.info('Exporting pseudo code...');
         let pseudo = new PseudoCodeGeneration(metadatas);
         pseudo.export('data/pseudo.cs');

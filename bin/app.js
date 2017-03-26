@@ -13,7 +13,6 @@ const _ = require("lodash");
 // import * as logger from 'winston';
 let Parser = require('binary-parser').Parser;
 const metadata_1 = require("./parsers/metadata");
-const elf_1 = require("./parsers/elf");
 const protos_1 = require("./generators/protos");
 const pseudo_1 = require("./generators/pseudo");
 // logger.remove(logger.transports.Console);
@@ -152,8 +151,6 @@ function Main() {
             ExtractInterfaces(data);
             ExtractTypes(data);
             ExtractImages(data, 'data/images.txt');
-            let elf = new elf_1.default();
-            elf.load('data/libil2cpp.so');
             logger.info('Exporting pseudo code...');
             let pseudo = new pseudo_1.default(metadatas);
             pseudo.export('data/pseudo.cs');
