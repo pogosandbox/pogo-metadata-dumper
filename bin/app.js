@@ -49,15 +49,15 @@ function ExtractTypes(data, file) {
         logger.info('Types Count: ' + typesCount);
         let rawTypes = parser_1.parsers.getTypesParser(typesCount)
             .parse(data.slice(metadatas.header.typeDefinitionsOffset));
-        logger.debug(rawTypes.slice(0, 5));
+        // logger.debug(rawTypes.slice(0, 5));
         metadatas.types = _.map(rawTypes, type => {
-            if (type.interfaces_count > 0 || type.interface_offsets_count > 0) {
-                logger.debug('type', type);
-                logger.debug('interface_count', type.interfaces_count);
-                logger.debug('interfacesStart', type.interfacesStart);
-                logger.debug('interface_offsets_count', type.interface_offsets_count);
-                logger.debug('interfaceOffsetsStart', type.interfaceOffsetsStart);
-            }
+            // if (type.interfaces_count > 0 || type.interface_offsets_count > 0) {
+            //     logger.debug('type', type);
+            //     logger.debug('interface_count', type.interfaces_count);
+            //     logger.debug('interfacesStart', type.interfacesStart);
+            //     logger.debug('interface_offsets_count', type.interface_offsets_count);
+            //     logger.debug('interfaceOffsetsStart', type.interfaceOffsetsStart);
+            // }
             return {
                 name: GetString(data, type.nameIndex),
                 interfaces: [],

@@ -15,6 +15,7 @@
     "winston": "^2.3.1"
   },
   "devDependencies": {
+    "@types/fs-promise": "^1.0.1",
     "@types/lodash": "^4.14.54",
     "@types/node": "^7.0.5",
     "tslint": "^4.5.1",
