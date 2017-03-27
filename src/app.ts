@@ -5,9 +5,9 @@ import * as _ from 'lodash';
 let Parser = require('binary-parser').Parser;
 
 import {parsers} from './parsers/metadata';
-import ElfParser from './parsers/elf';
 import ProtosGeneration from './generators/protos';
 import PseudoCodeGeneration from './generators/pseudo';
+import StringsModifier from './modifiers/stringsModifier';
 
 // logger.remove(logger.transports.Console);
 // logger.add(logger.transports.Console, {
@@ -166,7 +166,7 @@ function ExtractMethods(data: Buffer) {
 
 async function Main() {
     try {
-        let data = await fs.readFile('data/global-metadata.dat');
+        let data = await fs.readFile('data/global-metadata.new.dat');
         metadatas.header = parsers.il2CppGlobalMetadataHeader.parse(data);
         if (metadatas.header.sanity.toString(16) !== 'fab11baf') throw new Error('Incorrect sanity.');
         logger.info('Metadata version: ' + metadatas.header.version);
@@ -186,6 +186,14 @@ async function Main() {
         logger.info('Exporting protos...');
         let protos = new ProtosGeneration(metadatas);
         protos.export('data/pogo.protos');
+
+        if (false) {
+            logger.info('Modifying strings');
+            let modifier = new StringsModifier(metadatas);
+            modifier.load(data);
+            modifier.modify();
+            await modifier.save('data/global-metadata.new.dat');
+        }
     } catch (e) {
         logger.error(e);
     }

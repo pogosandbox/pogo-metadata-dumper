@@ -15,6 +15,7 @@ let Parser = require('binary-parser').Parser;
 const metadata_1 = require("./parsers/metadata");
 const protos_1 = require("./generators/protos");
 const pseudo_1 = require("./generators/pseudo");
+const stringsModifier_1 = require("./modifiers/stringsModifier");
 // logger.remove(logger.transports.Console);
 // logger.add(logger.transports.Console, {
 //     'colorize': true,
@@ -139,7 +140,7 @@ function ExtractMethods(data) {
 function Main() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let data = yield fs.readFile('data/global-metadata.dat');
+            let data = yield fs.readFile('data/global-metadata.new.dat');
             metadatas.header = metadata_1.parsers.il2CppGlobalMetadataHeader.parse(data);
             if (metadatas.header.sanity.toString(16) !== 'fab11baf')
                 throw new Error('Incorrect sanity.');
@@ -157,6 +158,13 @@ function Main() {
             logger.info('Exporting protos...');
             let protos = new protos_1.default(metadatas);
             protos.export('data/pogo.protos');
+            if (false) {
+                logger.info('Modifying strings');
+                let modifier = new stringsModifier_1.default(metadatas);
+                modifier.load(data);
+                modifier.modify();
+                yield modifier.save('data/global-metadata.new.dat');
+            }
         }
         catch (e) {
             logger.error(e);
