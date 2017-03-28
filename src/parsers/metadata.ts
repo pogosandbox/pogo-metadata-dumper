@@ -234,38 +234,45 @@ export let parsers = {
     il2CppFieldDefaultValue,
     il2CppParameterDefinition,
     string: (new Parser()).string('', {zeroTerminated: true}),
-    getLitteralsParser: function(count) {
+    getLitteralsParser: function(count: number) {
         return new Parser()
             .array('', {
                 type: parsers.il2CppStringLiteral,
                 length: count,
             });
     },
-    getImagesParser: function(count) {
+    getImagesParser: function(count: number) {
         return new Parser()
             .array('', {
                 type: parsers.il2CppImageDefinition,
                 length: count,
             });
     },
-    getTypesParser: function(count) {
+    getTypesParser: function(count: number) {
         return new Parser()
             .array('', {
                 type: parsers.il2CppTypeDefinition,
                 length: count,
             });
     },
-    getMethodsParser: function(count) {
+    getMethodsParser: function(count: number) {
         return new Parser()
             .array('', {
                 type: parsers.il2CppMethodDefinition,
                 length: count,
             });
     },
-    getFieldsParser: function(count) {
+    getFieldsParser: function(count: number) {
         return new Parser()
             .array('', {
                 type: parsers.il2CppFieldDefinition,
+                length: count,
+            });
+    },
+    getUsageParser: function(count: number) {
+        return new Parser()
+            .array('', {
+                type: parsers.il2CppMetadataUsageList,
                 length: count,
             });
     }

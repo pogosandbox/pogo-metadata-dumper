@@ -15,7 +15,6 @@ let Parser = require('binary-parser').Parser;
 const metadata_1 = require("./parsers/metadata");
 const protos_1 = require("./generators/protos");
 const pseudo_1 = require("./generators/pseudo");
-const stringsModifier_1 = require("./modifiers/stringsModifier");
 // logger.remove(logger.transports.Console);
 // logger.add(logger.transports.Console, {
 //     'colorize': true,
@@ -29,12 +28,14 @@ let logger = {
 let metadatas = {
     header: null,
     strings: [],
+    stringsLiterals: [],
     images: [],
     interfaces: [],
     types: [],
     methods: [],
     parameters: [],
     fields: [],
+    usages: [],
 };
 function ExtractStringLitterals(data, file) {
     logger.info('Begin extract string litterals...');
@@ -44,7 +45,9 @@ function ExtractStringLitterals(data, file) {
     let stream = fs.createWriteStream(file, 'utf8');
     _.each(litterals, litteral => {
         let start = metadatas.header.stringLiteralDataOffset + litteral.dataIndex;
-        stream.write(data.slice(start, start + litteral.length).toString('utf8') + '\r\n');
+        let str = data.slice(start, start + litteral.length).toString('utf8');
+        metadatas.stringsLiterals.push(str);
+        stream.write(str + '\r\n');
     });
     stream.end();
     logger.info('  ' + litterals.length + ' string litterals extracted.');
@@ -137,15 +140,49 @@ function ExtractMethods(data) {
     });
     logger.info('  ' + metadatas.methods.length + ' methods extracted.');
 }
+// function GetEncodedIndexType(index: number): string {
+//     let realIdx = ((index & 0xE0000000) >> 29);
+//     let usageMap = [
+//         'Invalid',
+//         'TypeInfo',
+//         'Il2CppType',
+//         'MethodDef',
+//         'FieldInfo',
+//         'StringLiteral',
+//         'MethodRef',
+//     ];
+//     return usageMap[realIdx];
+// }
+// function GetDecodedMethodIndex(index: number): number {
+//     return (index & 0x1FFFFFFF);
+// }
+// function ExtractUsages(data: Buffer) {
+//     logger.info('Begin extract usage...');
+//     let usageListCount = metadatas.header.metadataUsageListsCount / parsers.il2CppMetadataUsageList.sizeOf();
+//     let usageList: any[] = parsers.getUsageParser(usageListCount)
+//                             .parse(data.slice(metadatas.header.metadataUsageListsOffset));
+//     let usageCount = metadatas.header.metadataUsagePairsCount / parsers.il2CppMetadataUsagePair.sizeOf();
+//     let usages: any[] = parsers.getUsageParser(usageCount)
+//                             .parse(data.slice(metadatas.header.metadataUsagePairsOffset));
+//     _.each(usageList, usage => {
+//         usage.usages = usages.slice(usage.start, usage.start + usage.count);
+//         _.each(usage.usages, u => {
+//             u.name = GetEncodedIndexType(u.encodedSourceIndex);
+//             u.methodIndex = GetDecodedMethodIndex(u.encodedSourceIndex);
+//         });
+//     });
+//     logger.info('  ' + usageList.length + ' usage extracted.');
+// }
 function Main() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let data = yield fs.readFile('data/global-metadata.new.dat');
+            let data = yield fs.readFile('data/global-metadata.dat');
             metadatas.header = metadata_1.parsers.il2CppGlobalMetadataHeader.parse(data);
             if (metadatas.header.sanity.toString(16) !== 'fab11baf')
                 throw new Error('Incorrect sanity.');
             logger.info('Metadata version: ' + metadatas.header.version);
             ExtractStringLitterals(data, 'data/string.litterals.txt');
+            // ExtractUsages(data);
             ExtractFields(data);
             ExtractParameters(data);
             ExtractMethods(data);
@@ -158,13 +195,11 @@ function Main() {
             logger.info('Exporting protos...');
             let protos = new protos_1.default(metadatas);
             protos.export('data/pogo.protos');
-            if (false) {
-                logger.info('Modifying strings');
-                let modifier = new stringsModifier_1.default(metadatas);
-                modifier.load(data);
-                modifier.modify();
-                yield modifier.save('data/global-metadata.new.dat');
-            }
+            // logger.info('Modifying strings');
+            // let modifier = new StringsModifier(metadatas);
+            // modifier.load(data);
+            // modifier.modify();
+            // await modifier.save('data/global-metadata.new.dat');
         }
         catch (e) {
             logger.error(e);

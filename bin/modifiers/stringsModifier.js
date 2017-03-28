@@ -34,10 +34,14 @@ class StringsModifier {
         });
     }
     modify() {
-        _.each(this.strings, str => {
-            if (_.startsWith(str.value, 'https://sso.pokemon.com')) {
-                let newstr = str.value.replace('https://', 'http://') + '#';
-                this.content.fill(Buffer.from(newstr, 'utf8'), str.start, str.end);
+        _.each(this.strings, (str, idx) => {
+            if (_.startsWith(str.value, 'https://sso.pokemon.com') || str.value === 'https://' || str.value === 'https://{0}/{1}') {
+                let newstr = str.value.replace('https://', 'http://');
+                let newBuf = Buffer.from(newstr, 'utf8');
+                this.content.fill(newBuf, str.start, str.end);
+                let lengthOffset = this.metadatas.header.stringLiteralOffset;
+                lengthOffset += metadata_1.parsers.il2CppStringLiteral.sizeOf() * idx;
+                this.content.writeInt32LE(newBuf.length, lengthOffset);
             }
         });
     }

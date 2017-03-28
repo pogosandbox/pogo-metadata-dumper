@@ -247,6 +247,13 @@ exports.parsers = {
             type: exports.parsers.il2CppFieldDefinition,
             length: count,
         });
+    },
+    getUsageParser: function (count) {
+        return new Parser()
+            .array('', {
+            type: exports.parsers.il2CppMetadataUsageList,
+            length: count,
+        });
     }
 };
 //# sourceMappingURL=metadata.js.map
